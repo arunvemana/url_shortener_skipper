@@ -14,7 +14,7 @@ async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def welcome_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("welcome to the Test Bot")
+    await update.message.reply_text("welcome to ByPass bot, right now we support only *PublicEarn* website links only \n Send only valid url like \nhttps://publicearn.com/*** ")
 
 
 app = ApplicationBuilder().token(os.getenv('Telegram_token')).build()
