@@ -8,6 +8,11 @@ packages = [{include = "url_shortener_skipper"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+requests = "^2.32.3"
+beautifulsoup4 = "^4.12.3"
+selenium = "^4.25.0"
+python-telegram-bot = "^21.6"
+python-dotenv = "^1.0.1"
 
 
 [build-system]
