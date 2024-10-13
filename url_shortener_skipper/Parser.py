@@ -22,10 +22,12 @@ class Parser:
     def set_property():
         options = webdriver.ChromeOptions()
         options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
-        options.add_argument('headless')
-        options.add_argument('--disable-gpu')
-        options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--no-sandbox')
+        options.add_argument('headless')
+        options.add_argument('disable-infobars')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--remote-debuggin-pipes')
         driver = webdriver.Chrome(options=options)
         return driver
 
@@ -100,6 +102,3 @@ class PublicEarn(Parser):
                         return generate_output_url
         else:
             return "we wont support this website"
-
-
-
