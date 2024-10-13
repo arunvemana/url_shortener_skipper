@@ -96,9 +96,8 @@ class PublicEarn(Parser):
                         print(id_value)  # Output: 872001
                         generate_output_url = f"{self.url}/?sid={id_value}"
                         print(generate_output_url)
-                        break
-            self.quit()
-            return generate_output_url
+                        self.quit()
+                        return generate_output_url
         else:
             return "we wont support this website"
 
