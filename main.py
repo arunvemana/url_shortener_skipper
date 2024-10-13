@@ -17,6 +17,7 @@ cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
+        user_name TEXT,
         message TEXT,
         chat_id INTEGER,
         message_id INTEGER,
@@ -61,18 +62,21 @@ async def store_message(update):
         cursor.execute("""
             INSERT INTO user_messages (
                 user_id,
+                user_name,
                 message,
                 chat_id,
                 message_id,
                 update_id
-            ) VALUES (?, ?, ?, ?, ?)
+            ) VALUES (?,?, ?, ?, ?, ?)
         """, (
             update.effective_user.id,
+            update.effective_user.username,
             update.message.text,
             update.message.chat_id,
             update.message.message_id,
             update.update_id
         ))
+        print(update.effective_user)
         conn.commit()
         conn.close()
     except sqlite3.OperationalError as e:
