@@ -1,5 +1,6 @@
 import os
 
+import selenium.common.exceptions
 from selenium import webdriver
 
 import time
@@ -52,14 +53,22 @@ class PublicEarn(Parser):
         script_start_index = html_source.find(script_tag)
         script_end_index = html_source.find('</script>', script_start_index)
         script = html_source[script_start_index + len(script_tag):script_end_index]
-        self.driver.execute_script(script)
+        try:
+            self.driver.execute_script(script)
+        except selenium.common.exceptions.JavascriptException as e:
+            print(f"Scripted Failed ! retry once again for {self.url}:{e}")
 
-    def get_verify(self):
-        self.general_wait()
-        self.driver.execute_script('ajaxCallMaker("tp98");')
-        self.general_wait()
-        self.driver.execute_script('ajaxCallMaker("tp98");')
-        self.general_wait()
+    def get_verify(self)->bool:
+        try:
+            self.general_wait()
+            self.driver.execute_script('ajaxCallMaker("tp98");')
+            self.general_wait()
+            self.driver.execute_script('ajaxCallMaker("tp98");')
+            self.general_wait()
+            return True
+        except selenium.common.exceptions.JavascriptException as e:
+            print("Scripted Failed ! server was busy")
+            return False
 
     @staticmethod
     def process_browser_logs_for_network_events(logs):
@@ -82,23 +91,24 @@ class PublicEarn(Parser):
     def process(self):
         if "publicearn" in self.url.lower() and self.url.startswith('https'):
             self.initial()
-            self.get_verify()
-            filename = self.store_logs()
-            with open(filename, "r") as f:
-                events = json.load(f)
-            for event in events:
-                if event['method'] == 'Network.requestWillBeSent':
-                    if event['params']['request']['method'] == 'POST' and event['params']['request']['url'] == 'https://publicearn.com/link/verify.php':
-                        data = event['params']['request']['postData']
-                        pattern = r"id=(\d+)"
-                        try:
-                            id_value = re.findall(pattern, data)[0]
-                        except IndexError as _:
-                            continue
-                        print(id_value)  # Output: 872001
-                        generate_output_url = f"{self.url}/?sid={id_value}"
-                        print(generate_output_url)
-                        self.quit()
-                        return generate_output_url
+            if self.get_verify():
+                filename = self.store_logs()
+                with open(filename, "r") as f:
+                    events = json.load(f)
+                for event in events:
+                    if event['method'] == 'Network.requestWillBeSent':
+                        if event['params']['request']['method'] == 'POST' and event['params']['request']['url'] == 'https://publicearn.com/link/verify.php':
+                            data = event['params']['request']['postData']
+                            pattern = r"id=(\d+)"
+                            try:
+                                id_value = re.findall(pattern, data)[0]
+                            except IndexError as _:
+                                continue
+                            generate_output_url = f"{self.url}/?sid={id_value}"
+                            self.quit()
+                            return generate_output_url
+            else:
+                return "Please! try again,Server was busy"
+
         else:
             return "we wont support this website"
