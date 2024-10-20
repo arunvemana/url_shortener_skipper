@@ -1,7 +1,9 @@
 import os
 
+import requests
 import selenium.common.exceptions
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 
 import time
 import re
@@ -10,13 +12,10 @@ from datetime import datetime
 import json
 
 
-
-
-
 class Parser:
     def __init__(self):
         # self.basic_url_reg = re.compile('(?<=\swindow.location.href = )[^\"]+',re.IGNORECASE)
-        self.basic_url_reg = re.compile('"([^"]+)"',re.IGNORECASE)
+        self.basic_url_reg = re.compile('"([^"]+)"', re.IGNORECASE)
         self.driver = self.set_property()
 
     @staticmethod
@@ -39,8 +38,67 @@ class Parser:
     def quit(self):
         self.driver.quit()
 
+
+class GpLinks(Parser):
+    def __init__(self, url: str):
+        super(GpLinks, self).__init__()
+        self.url: str = url
+        self.set_visit_url = 'https://gplinks.com/track/data.php'
+
+    def set_visitor(self, status: str, impressions: str, visitor_id: str):
+        _payload = {
+            'request': "setVisitor",
+            'status': status,
+            'imps': impressions,
+            'vid': visitor_id
+        }
+        headers = {
+            'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'}
+        response = requests.post(self.set_visit_url, data=_payload,headers=headers)
+        print(response.status_code)
+
+    def get_original_link(self,vid :str ,status:str) -> str:
+        _payload = {
+            'request':'setVisitor',
+            'vid':vid,
+            'status':status
+        }
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36' }
+        requests.post(self.set_visit_url, data=_payload, headers=headers)
+
+
+    def get_details(self):
+        vid, pub_id, link_id = None, None, None
+        try:
+            vid = self.driver.get_cookie('vid')['value']
+            pub_id = self.driver.get_cookie('pid')['value']
+            link_id = self.driver.get_cookie('lid')['value']
+        except selenium.common.exceptions.NoSuchCookieException as e:
+            print("no cookie found :", e)
+        except Exception as e:
+            print("Cookie type changed")
+        return vid, pub_id, link_id
+
+    def process(self):
+        self.driver.get(url=self.url)
+        try:
+            vid, pub_id, link_id = self.get_details()
+            print(pub_id)
+            if vid and pub_id and link_id:
+                self.set_visitor(1, 2, visitor_id=vid)
+                self.set_visitor(2, 4, visitor_id=vid)
+                self.set_visitor(3, 6, visitor_id=vid)
+                print(vid)
+                self.get_original_link(vid,4)
+                return  f"https://gplinks.co/{link_id}/?pid={pub_id}&vid={vid}"
+        except Exception as e:
+            print("glink issue", e)
+        return "Faced issue! Please try again"
+
+
 class PublicEarn(Parser):
-    def __init__(self,url:str):
+    def __init__(self, url: str):
         super().__init__()
         self.url: str = url
 
@@ -58,7 +116,7 @@ class PublicEarn(Parser):
         except selenium.common.exceptions.JavascriptException as e:
             print(f"Scripted Failed ! retry once again for {self.url}:{e}")
 
-    def get_verify(self)->bool:
+    def get_verify(self) -> bool:
         try:
             self.general_wait()
             self.driver.execute_script('ajaxCallMaker("tp98");')
@@ -78,13 +136,13 @@ class PublicEarn(Parser):
                 yield log
 
     def store_logs(self) -> str:
-        rand_int = random.randint(0,99999)
+        rand_int = random.randint(0, 99999)
         current_date = datetime.now().strftime("%Y%m%d")
         filename = f"network_{rand_int}{current_date}.json"
         raw_logs = self.driver.get_log("performance")
         events = self.process_browser_logs_for_network_events(raw_logs)
-        path = os.path.join(os.getcwd(),'url_shortener_skipper','network_traffic',filename)
-        with open(path,"w") as f:
+        path = os.path.join(os.getcwd(), 'url_shortener_skipper', 'network_traffic', filename)
+        with open(path, "w") as f:
             json.dump(list(events), f, indent=4)
         return path
 
@@ -97,7 +155,8 @@ class PublicEarn(Parser):
                     events = json.load(f)
                 for event in events:
                     if event['method'] == 'Network.requestWillBeSent':
-                        if event['params']['request']['method'] == 'POST' and event['params']['request']['url'] == 'https://publicearn.com/link/verify.php':
+                        if event['params']['request']['method'] == 'POST' and event['params']['request'][
+                            'url'] == 'https://publicearn.com/link/verify.php':
                             data = event['params']['request']['postData']
                             pattern = r"id=(\d+)"
                             try:

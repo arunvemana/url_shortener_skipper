@@ -2,7 +2,7 @@ import os
 import re
 import sqlite3
 
-from url_shortener_skipper.Parser import PublicEarn
+from url_shortener_skipper.Parser import PublicEarn,GpLinks
 from telegram import Update
 
 from telegram.ext import Updater, CommandHandler, ContextTypes, ApplicationBuilder, MessageHandler, filters
@@ -36,7 +36,7 @@ async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def welcome_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("welcome to ByPass bot, right now we support only *PublicEarn* website links only \n Send only valid url like \nhttps://publicearn.com/*** ")
+    await update.message.reply_text("welcome to ByPass bot, right now we support only *PublicEarn* website links only \n Send only valid url like \nhttps://publicearn.com/*** or \nhttps://gplinks.co/### \n *Gplinks only work when link was open in Desktop/laptop ")
 
 
 app = ApplicationBuilder().token(os.getenv('Telegram_token')).build()
@@ -45,15 +45,23 @@ app = ApplicationBuilder().token(os.getenv('Telegram_token')).build()
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_message = update.message.text
     print("process start")
-    if re.match('^https://', user_message) and "publicearn" in user_message:
-        for general_message in ['verified','Started Process','Ads skipping']:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=general_message,reply_to_message_id=update.message.message_id)
-        reply_message = PublicEarn(user_message).process()
-        print("output",reply_message)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=reply_message)
+    if re.match('^https://', user_message):
+        if "publicearn" in user_message:
+            for general_message in ['verified','Started Process','Ads skipping']:
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=general_message,reply_to_message_id=update.message.message_id)
+            reply_message = PublicEarn(user_message).process()
+            print("output",reply_message)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=reply_message)
+        if "gplinks.co" in user_message:
+            for general_message in ['verified','Started Process','Ads skipping']:
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=general_message,reply_to_message_id=update.message.message_id)
+            reply_message = GpLinks(user_message).process()
+            print("output",reply_message)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=reply_message)
+
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id,
-                                       text="Send only valid url like \nhttps://publicearn.com/*** ")
+                                       text="Send only valid url like \nhttps://publicearn.com/*** \n or \nhttps://gplinks.co/### \n *Gplinks only work when link was open in Desktop/laptop")
 
 async def store_message(update):
     conn = sqlite3.connect("telegram_data.db")
